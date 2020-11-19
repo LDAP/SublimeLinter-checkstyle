@@ -39,7 +39,8 @@ class CheckstyleLinter(Linter):
             if os.path.isfile(self.checkstyle_jar):
                 self.print_debug_panel('Using: ' + self.checkstyle_jar)
             else:
-                self.print_debug_panel(self.file + ' does not exists')
+                self.print_debug_panel('{} does not exists'.format(
+                    self.checkstyle_jar))
                 url = self.download_url(version)
                 self.print_debug_panel("Make sure folder exists")
                 os.makedirs(self.plugin_dir(), exist_ok=True)
