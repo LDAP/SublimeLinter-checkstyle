@@ -1,6 +1,8 @@
-SublimeLinter-contrib-__linter__
+SublimeLinter-checkstyle
 -------------------------------
-This linter plugin for SublimeLinter provides an interface to __linter__.
+This linter plugin for SublimeLinter provides an interface to Checkstyle.
+
+You must ensure that java is installed on your system.
 
 For more information, please see:
-https://github.com/__user__/SublimeLinter-contrib-__linter__
+https://github.com/LDAP/SublimeLinter-checkstyle
