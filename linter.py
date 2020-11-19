@@ -47,6 +47,7 @@ class CheckstyleLinter(Linter):
                 os.makedirs(self.plugin_dir(), exist_ok=True)
                 self.print_debug_panel("Downloading from {}".format(url))
                 download_file(url, self.checkstyle_jar)
+                self.cleanup()
 
         except URLError:
             # Search existing jar if maven does not respond
@@ -110,3 +111,10 @@ class CheckstyleLinter(Linter):
         return os.path.abspath(os.path.join(self.plugin_dir(),
                                             self.jar_filename(version)))
 
+    def cleanup(self):
+        for f in os.listdir(self.plugin_dir()):
+            self.print_debug_panel(f)
+            abs_path = os.path.abspath(os.path.join(self.plugin_dir(), f))
+            if abs_path != self.checkstyle_jar:
+                self.print_debug_panel('Removing old jar: {}'.format(abs_path))
+                os.remove(abs_path)
