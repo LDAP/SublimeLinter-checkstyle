@@ -17,6 +17,7 @@ class CheckstyleLinter(Linter):
     regex = (r'^\[(?:(?P<warning>WARN)|(?P<error>ERROR))\]\s'
              r'(?P<filename>.*):(?P<line>\d+):(?P<col>\d+):\s(?P<message>.*)$')
     multiline = True
+    tempfile_suffix = 'temp'
     defaults = {
         'selector': 'source.java',
         'config': 'google_checks.xml',
@@ -24,17 +25,17 @@ class CheckstyleLinter(Linter):
         'debug': False
     }
     debug = False
-    checkstyle_jar = None  # only contact Maven once
+    checkstyle_jar = None
 
     def cmd(self):
         settings = self.settings
+        self.debug = settings.get('debug')
 
         try:
             version = self.checkstyle_version()
-            self.debug = settings.get('debug')
             self.print_debug_panel('Using Checkstyle {}'.format(version))
 
-            # Get checkstyle jar (file)
+            # Get checkstyle jar
             self.checkstyle_jar = self.checkstyle_jar_path(version)
             if os.path.isfile(self.checkstyle_jar):
                 self.print_debug_panel('Using: ' + self.checkstyle_jar)
@@ -46,11 +47,12 @@ class CheckstyleLinter(Linter):
                 os.makedirs(self.plugin_dir(), exist_ok=True)
                 self.print_debug_panel("Downloading from {}".format(url))
                 download_file(url, self.checkstyle_jar)
+
         except URLError:
-            # Search existing jar if no network connection
+            # Search existing jar if maven does not respond
             jars = os.listdir(self.plugin_dir())
             if jars:
-                self.checkstyle_jar = jars[0]
+                self.checkstyle_jar = os.path.join(self.plugin_dir(), jars[0])
 
         # Build command
         command = ['java', '-jar', '{}'.format(self.checkstyle_jar)]
@@ -58,7 +60,7 @@ class CheckstyleLinter(Linter):
         self.print_debug_panel('Using config: {}'
                                .format(checkstyle_config))
         command += ['-c', '{}'.format(checkstyle_config)]
-        command += ['${file}']
+        command += ['${temp_file}']
         command = tuple(command)
         self.print_debug_panel('Executing {}'.format(command))
         return command
@@ -74,7 +76,7 @@ class CheckstyleLinter(Linter):
     def download_url(self, version) -> str:
         return self.download_base_url() +\
             'checkstyle-{}/'.format(version) +\
-            self.filename(version)
+            self.jar_filename(version)
 
     def checkstyle_version(self) -> str:
         settings = self.settings
@@ -92,7 +94,7 @@ class CheckstyleLinter(Linter):
         else:
             return version
 
-    def filename(self, version):
+    def jar_filename(self, version):
         return 'checkstyle-{}-all.jar'.format(version)
 
     def print_debug_panel(self, msg):
@@ -106,4 +108,5 @@ class CheckstyleLinter(Linter):
 
     def checkstyle_jar_path(self, version):
         return os.path.abspath(os.path.join(self.plugin_dir(),
-                                            self.filename(version)))
+                                            self.jar_filename(version)))
+
