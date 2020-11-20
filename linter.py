@@ -17,7 +17,7 @@ class CheckstyleLinter(Linter):
     regex = (r'^\[(?:(?P<warning>WARN)|(?P<error>ERROR))\]\s'
              r'(?P<filename>.*):(?P<line>\d+):(?P<col>\d+):\s(?P<message>.*)$')
     multiline = True
-    tempfile_suffix = 'temp'
+    tempfile_suffix = '-'
     defaults = {
         'selector': 'source.java',
         'config': 'google_checks.xml',
@@ -61,7 +61,7 @@ class CheckstyleLinter(Linter):
         self.print_debug_panel('Using config: {}'
                                .format(checkstyle_config))
         command += ['-c', '{}'.format(checkstyle_config)]
-        command += ['${temp_file}']
+        command += ['${file_on_disk}']
         command = tuple(command)
         self.print_debug_panel('Executing {}'.format(command))
         return command
