@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 from urllib.request import urlopen
 from urllib.error import URLError
 import shutil
+from .constants import *
 
 
 def download_file(url, file_name):
@@ -12,8 +13,7 @@ def download_file(url, file_name):
         shutil.copyfileobj(response, out_file)
 
 
-class CheckstyleLinter(Linter):
-    name = 'SublimeLinter-checkstyle'
+class Checkstyle(Linter):
     regex = (r'^\[(?:(?P<warning>WARN)|(?P<error>ERROR))\]\s'
              r'(?P<filename>.*):(?P<line>\d+):(?P<col>\d+):\s(?P<message>.*)$')
     multiline = True
@@ -69,13 +69,10 @@ class CheckstyleLinter(Linter):
     def plugin_dir(self) -> str:
         return os.path.abspath(os.path.join(sublime.cache_path(),
                                             "..", "Package Storage",
-                                            self.name))
-
-    def download_base_url(self) -> str:
-        return 'https://github.com/checkstyle/checkstyle/releases/download/'
+                                            CACHE_FOLDER_NAME))
 
     def download_url(self, version) -> str:
-        return self.download_base_url() +\
+        return DOWNLOAD_BASE_URL +\
             'checkstyle-{}/'.format(version) +\
             self.jar_filename(version)
 
@@ -85,10 +82,7 @@ class CheckstyleLinter(Linter):
         if version == 'latest':
             self.print_debug_panel('Polling current checkstyle'
                                    'version from Maven')
-            xml_url = 'https://repo1.maven.org/maven2/'\
-                'com/puppycrawl/tools/checkstyle/'\
-                'maven-metadata.xml'
-            with urlopen(xml_url) as f:
+            with urlopen(VERSIONS_XML_URL) as f:
                 v_tree = ET.parse(f)
                 v_root = v_tree.getroot()
                 return v_root[2][1].text
@@ -102,9 +96,9 @@ class CheckstyleLinter(Linter):
         if self.debug is False:
             return
         window = sublime.active_window()
-        debug_panel = window.find_output_panel(self.name)
+        debug_panel = window.find_output_panel(DEBUG_PANEL_NAME)
         if debug_panel is None:
-            debug_panel = window.create_output_panel(self.name)
+            debug_panel = window.create_output_panel(DEBUG_PANEL_NAME)
         debug_panel.run_command("append", {"characters": '{}\n'.format(msg)})
 
     def checkstyle_jar_path(self, version):
