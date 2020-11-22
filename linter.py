@@ -15,7 +15,8 @@ def download_file(url, file_name):
 
 class Checkstyle(Linter):
     regex = (r'^\[(?:(?P<warning>WARN)|(?P<error>ERROR))\]\s'
-             r'(?P<filename>.*):(?P<line>\d+):(?P<col>\d+):\s(?P<message>.*)$')
+             r'(?P<filename>.*?):(?P<line>\d+):(?:(?P<col>\d+):)?\s'
+             r'(?P<message>.*)$')
     multiline = True
     tempfile_suffix = '-'
     defaults = {
