@@ -6,7 +6,6 @@ import xml.etree.ElementTree as ET
 from urllib.request import urlopen
 from urllib.error import URLError, HTTPError
 import shutil
-from .constants import *
 import logging
 
 logger = logging.getLogger('SublimeLinter.plugin.checkstyle')
@@ -41,20 +40,19 @@ def download_url(version) -> str:
 def fetch_latest_cs_version() -> str:
     global CURRENT_LATEST_CS_VERSION
 
-    if (CURRENT_LATEST_CS_VERSION is not None):
-        return
-
-    logger.info('Polling current checkstyle'
-                'version from Maven')
-    try:
-        with urlopen(VERSIONS_XML_URL) as f:
-            v_tree = ET.parse(f)
-            v_root = v_tree.getroot()
-            CURRENT_LATEST_CS_VERSION = v_root[2][1].text
-        logger.info('Latest checkstyle version on Maven is {}'
-                    .format(CURRENT_LATEST_CS_VERSION))
-    except URLError:
-        logger.warning('Latest cs version could not be fetched!')
+    if (CURRENT_LATEST_CS_VERSION is None):
+        logger.info('Polling current checkstyle'
+                    'version from Maven')
+        try:
+            with urlopen(VERSIONS_XML_URL) as f:
+                v_tree = ET.parse(f)
+                v_root = v_tree.getroot()
+                CURRENT_LATEST_CS_VERSION = v_root[2][1].text
+            logger.info('Latest checkstyle version on Maven is {}'
+                        .format(CURRENT_LATEST_CS_VERSION))
+        except URLError:
+            logger.warning('Latest cs version could not be fetched!')
+    return CURRENT_LATEST_CS_VERSION
 
 
 def cleanup(keep):
@@ -66,6 +64,13 @@ def cleanup(keep):
 
 
 CURRENT_LATEST_CS_VERSION = None
+DOWNLOAD_BASE_URL = 'https://github.com/checkstyle/'\
+                    'checkstyle/releases/download/'
+VERSIONS_XML_URL = 'https://repo1.maven.org/maven2/'\
+                   'com/puppycrawl/tools/checkstyle/'\
+                   'maven-metadata.xml'
+DEBUG_PANEL_NAME = 'SublimeLinter-checkstyle'
+CACHE_FOLDER_NAME = 'SublimeLinter-checkstyle'
 
 
 class Checkstyle(Linter):
@@ -81,8 +86,6 @@ class Checkstyle(Linter):
     }
 
     def cmd(self):
-        fetch_latest_cs_version()
-
         version = self.cs_version()
         checkstyle_jar = None
 
@@ -129,7 +132,7 @@ class Checkstyle(Linter):
         global CURRENT_LATEST_CS_VERSION
         version = self.settings.get('version')
         if version == 'latest':
-            return CURRENT_LATEST_CS_VERSION  # Can be None
+            return fetch_latest_cs_version()  # Can be None
         else:
             return version
 
