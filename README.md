@@ -3,7 +3,7 @@ SublimeLinter-checkstyle
 
 [![Build Status](https://travis-ci.org/SublimeLinter/SublimeLinter-contrib-checkstyle.svg?branch=master)](https://travis-ci.org/SublimeLinter/SublimeLinter-contrib-checkstyle)
 
-This linter plugin for [SublimeLinter](https://github.com/SublimeLinter/SublimeLinter) provides an interface to [checkstyle](__linter_homepage__). It will be used with files that have the “java” syntax.
+This linter plugin for [SublimeLinter](https://github.com/SublimeLinter/SublimeLinter) provides an interface to [checkstyle](https://checkstyle.org/). It will be used with files that have the “java” syntax.
 
 ## Installation
 SublimeLinter must be installed in order to use this plugin. 
