@@ -9,7 +9,7 @@ import shutil
 from .constants import *
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('SublimeLinter.plugin.checkstyle')
 
 
 def download_file(url, file_name) -> None:
@@ -38,30 +38,20 @@ def download_url(version) -> str:
         jar_filename(version)
 
 
-def print_debug(msg):
-    # if self.debug is False:
-    #    return
-    window = sublime.active_window()
-    debug_panel = window.find_output_panel(DEBUG_PANEL_NAME)
-    if debug_panel is None:
-        debug_panel = window.create_output_panel(DEBUG_PANEL_NAME)
-    debug_panel.run_command("append", {"characters": '{}\n'.format(msg)})
-
-
 def fetch_latest_cs_version() -> str:
     global CURRENT_LATEST_CS_VERSION
 
     if (CURRENT_LATEST_CS_VERSION is not None):
         return
 
-    print_debug('Polling current checkstyle'
+    logger.info('Polling current checkstyle'
                 'version from Maven')
     try:
         with urlopen(VERSIONS_XML_URL) as f:
             v_tree = ET.parse(f)
             v_root = v_tree.getroot()
             CURRENT_LATEST_CS_VERSION = v_root[2][1].text
-        print_debug('Latest checkstyle version on Maven is {}'
+        logger.info('Latest checkstyle version on Maven is {}'
                     .format(CURRENT_LATEST_CS_VERSION))
     except URLError:
         logger.warning('Latest cs version could not be fetched!')
@@ -71,7 +61,7 @@ def cleanup(keep):
     for f in os.listdir(plugin_dir()):
         abs_path = os.path.abspath(os.path.join(plugin_dir(), f))
         if abs_path != keep:
-            print_debug('Removing old jar: {}'.format(abs_path))
+            logger.info('Removing old jar: {}'.format(abs_path))
             os.remove(abs_path)
 
 
@@ -87,20 +77,17 @@ class Checkstyle(Linter):
     defaults = {
         'selector': 'source.java',
         'config': 'google_checks.xml',
-        'version': 'latest',
-        'debug': False
+        'version': 'latest'
     }
-    debug = False
 
     def cmd(self):
         fetch_latest_cs_version()
-        self.debug = self.settings.get('debug')
 
         version = self.cs_version()
         checkstyle_jar = None
 
         if version is not None:
-            print_debug('Using Checkstyle {}'.format(version))
+            logger.info('Using Checkstyle {}'.format(version))
             try:
                 checkstyle_jar = self.provide_jar(version)
             except (HTTPError, URLError):
@@ -125,11 +112,10 @@ class Checkstyle(Linter):
         # Build command
         command = ['java', '-jar', '{}'.format(checkstyle_jar)]
         checkstyle_config = self.settings.get('config')
-        print_debug('Using config: {}'.format(checkstyle_config))
+        logger.info('Using checkstyle config: {}'.format(checkstyle_config))
         command += ['-c', '{}'.format(checkstyle_config)]
         command += ['${file_on_disk}']
         command = tuple(command)
-        print_debug('Executing {}'.format(command))
         return command
 
     def cs_version(self) -> str:
@@ -156,13 +142,13 @@ class Checkstyle(Linter):
         """
         checkstyle_jar = jar_path(version)
         if os.path.isfile(checkstyle_jar):
-            print_debug('Using existing jar: ' + checkstyle_jar)
+            logger.info('Using existing jar: ' + checkstyle_jar)
         else:
-            print_debug('{} does not exists'.format(checkstyle_jar))
-            print_debug("Make sure folder exists")
+            logger.info('{} does not exists'.format(checkstyle_jar))
+            logger.info("Make sure folder exists")
             os.makedirs(plugin_dir(), exist_ok=True)
             url = download_url(version)
-            print_debug("Downloading from {}".format(url))
+            logger.info("Downloading from {}".format(url))
             download_file(url, checkstyle_jar)
             cleanup(checkstyle_jar)
         return checkstyle_jar
