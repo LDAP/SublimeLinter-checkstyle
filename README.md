@@ -24,4 +24,3 @@ Additional SublimeLinter-checkstyle settings:
 |:------|:--------------|
 |version|`latest` or a specific version from https://github.com/checkstyle/checkstyle/releases/|
 |config |/path/to/checkstyle/config.xml|
-|debug  |`True` or `False`|
