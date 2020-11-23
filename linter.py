@@ -6,7 +6,6 @@ import xml.etree.ElementTree as ET
 from urllib.request import urlopen
 from urllib.error import URLError, HTTPError
 import shutil
-from .constants import *
 import logging
 
 logger = logging.getLogger('SublimeLinter.plugin.checkstyle')
@@ -66,6 +65,13 @@ def cleanup(keep):
 
 
 CURRENT_LATEST_CS_VERSION = None
+DOWNLOAD_BASE_URL = 'https://github.com/checkstyle/'\
+                    'checkstyle/releases/download/'
+VERSIONS_XML_URL = 'https://repo1.maven.org/maven2/'\
+                   'com/puppycrawl/tools/checkstyle/'\
+                   'maven-metadata.xml'
+DEBUG_PANEL_NAME = 'SublimeLinter-checkstyle'
+CACHE_FOLDER_NAME = 'SublimeLinter-checkstyle'
 
 
 class Checkstyle(Linter):
