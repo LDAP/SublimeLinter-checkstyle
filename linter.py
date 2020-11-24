@@ -22,21 +22,20 @@ def download_file(url, file_name) -> None:
     r = requests.get(url, stream=True)
     total_length = r.headers.get('content-length')
 
-    if total_length:
-        finished = 0
-        total_length = int(total_length)
-        with open(file_name, 'wb') as out_file:
+    with open(file_name, 'wb') as out_file:
+        if total_length:
+            finished = 0
+            total_length = int(total_length)
             last_displayed = 0
             for chunk in r.iter_content(chunk_size=4096):
-                out_file.write(chunk)
                 finished += len(chunk)
                 if last_displayed != int(time.time()):
                     show_download_progress(finished, total_length)
                     last_displayed = int(time.time())
-    else:
-        out_file.write(r.content)
-        sublime.status_message('Download Checkstyle...')
-
+                out_file.write(chunk)
+        else:
+            out_file.write(r.content)
+            sublime.status_message('Download Checkstyle...')
     show_download_progress(1, 1)
 
 
