@@ -7,6 +7,8 @@ from urllib.request import urlopen
 from urllib.error import URLError, HTTPError
 import logging
 import requests
+import time
+
 
 logger = logging.getLogger('SublimeLinter.plugin.checkstyle')
 
@@ -24,14 +26,18 @@ def download_file(url, file_name) -> None:
         finished = 0
         total_length = int(total_length)
         with open(file_name, 'wb') as out_file:
+            last_displayed = 0
             for chunk in r.iter_content(chunk_size=4096):
                 out_file.write(chunk)
                 finished += len(chunk)
-                if finished % 4096 * 100 == 0:  # Dont flood sublime
+                if last_displayed != int(time.time()):
                     show_download_progress(finished, total_length)
+                    last_displayed = int(time.time())
     else:
         out_file.write(r.content)
         sublime.status_message('Download Checkstyle...')
+
+    show_download_progress(1, 1)
 
 
 def jar_filename(version) -> str:
