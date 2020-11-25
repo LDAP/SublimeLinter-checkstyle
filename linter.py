@@ -28,10 +28,10 @@ def download_file(url, file_name) -> None:
             total_length = int(total_length)
             last_displayed = 0
             for chunk in r.iter_content(chunk_size=4096):
-                finished += len(chunk)
                 if last_displayed != int(time.time()):
                     show_download_progress(finished, total_length)
                     last_displayed = int(time.time())
+                finished += len(chunk)
                 out_file.write(chunk)
         else:
             out_file.write(r.content)
