@@ -5,15 +5,38 @@ import sublime
 import xml.etree.ElementTree as ET
 from urllib.request import urlopen
 from urllib.error import URLError, HTTPError
-import shutil
 import logging
+import requests
+import time
+
 
 logger = logging.getLogger('SublimeLinter.plugin.checkstyle')
 
 
+def show_download_progress(finished, total) -> None:
+    percent = finished * 100 / total
+    sublime.status_message('Downloading Checkstyle: {0:2.2f}%'.format(percent))
+
+
 def download_file(url, file_name) -> None:
-    with urlopen(url) as response, open(file_name, 'wb') as out_file:
-        shutil.copyfileobj(response, out_file)
+    r = requests.get(url, stream=True)
+    total_length = r.headers.get('content-length')
+
+    with open(file_name, 'wb') as out_file:
+        if total_length:
+            finished = 0
+            total_length = int(total_length)
+            last_displayed = 0
+            for chunk in r.iter_content(chunk_size=4096):
+                if last_displayed != int(time.time()):
+                    show_download_progress(finished, total_length)
+                    last_displayed = int(time.time())
+                finished += len(chunk)
+                out_file.write(chunk)
+        else:
+            out_file.write(r.content)
+            sublime.status_message('Download Checkstyle...')
+    show_download_progress(1, 1)
 
 
 def jar_filename(version) -> str:
