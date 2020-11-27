@@ -1,11 +1,11 @@
 from SublimeLinter.lint import Linter
 from SublimeLinter.lint.linter import PermanentError
+from urllib.request import urlopen
+from urllib.error import URLError, HTTPError
 from threading import Lock
 import os
 import sublime
 import xml.etree.ElementTree as ET
-from urllib.request import urlopen
-from urllib.error import URLError, HTTPError
 import logging
 import requests
 import time
