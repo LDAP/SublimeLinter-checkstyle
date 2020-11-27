@@ -1,5 +1,6 @@
 from SublimeLinter.lint import Linter
 from SublimeLinter.lint.linter import PermanentError
+from threading import Lock
 import os
 import sublime
 import xml.etree.ElementTree as ET
@@ -11,6 +12,7 @@ import time
 
 
 logger = logging.getLogger('SublimeLinter.plugin.checkstyle')
+lock = Lock()
 
 
 def show_download_progress(finished, total) -> None:
@@ -159,7 +161,9 @@ class Checkstyle(Linter):
         if version is not None:
             logger.info('Using Checkstyle {}'.format(version))
             try:
+                lock.acquire()
                 checkstyle_jar = self.provide_jar(version)
+                lock.release()
             except (HTTPError, URLError):
                 pass  # checkstyle jar is None
 
