@@ -9,10 +9,19 @@ import xml.etree.ElementTree as ET
 import logging
 import requests
 import time
+import subprocess
 
 
 logger = logging.getLogger('SublimeLinter.plugin.checkstyle')
 lock = Lock()
+
+CURRENT_LATEST_CS_VERSION = None
+DOWNLOAD_BASE_URL = 'https://github.com/checkstyle/'\
+                    'checkstyle/releases/download/'
+VERSIONS_XML_URL = 'https://repo1.maven.org/maven2/'\
+                   'com/puppycrawl/tools/checkstyle/'\
+                   'maven-metadata.xml'
+CACHE_FOLDER_NAME = 'SublimeLinter-checkstyle'
 
 
 def show_download_progress(finished, total) -> None:
@@ -129,17 +138,25 @@ def cleanup(keep) -> None:
     for f in os.listdir(plugin_dir()):
         abs_path = os.path.abspath(os.path.join(plugin_dir(), f))
         if abs_path != keep:
-            logger.info('Removing old jar: {}'.format(abs_path))
+            logger.info('Removing jar: {}'.format(abs_path))
             os.remove(abs_path)
 
 
-CURRENT_LATEST_CS_VERSION = None
-DOWNLOAD_BASE_URL = 'https://github.com/checkstyle/'\
-                    'checkstyle/releases/download/'
-VERSIONS_XML_URL = 'https://repo1.maven.org/maven2/'\
-                   'com/puppycrawl/tools/checkstyle/'\
-                   'maven-metadata.xml'
-CACHE_FOLDER_NAME = 'SublimeLinter-checkstyle'
+def delete_corrupted_jars() -> None:
+    if not os.path.isdir(plugin_dir()):
+        return
+    for f in os.listdir(plugin_dir()):
+        abs_path = os.path.abspath(os.path.join(plugin_dir(), f))
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        ret_code = subprocess.call(['java', '-jar', abs_path, '--version'],
+                                   startupinfo=startupinfo)
+        if ret_code != 0:
+            logger.info('{} is corrupted'.format(abs_path))
+            cleanup(None)
+
+
+delete_corrupted_jars()
 
 
 class Checkstyle(Linter):
