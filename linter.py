@@ -82,7 +82,7 @@ def jar_filename(version) -> str:
     return 'checkstyle-{}-all.jar'.format(version)
 
 
-def jar_path(version):
+def jar_path(version) -> str:
     return os.path.abspath(os.path.join(plugin_dir(),
                                         jar_filename(version)))
 
