@@ -1,26 +1,88 @@
 from SublimeLinter.lint import Linter
 from SublimeLinter.lint.linter import PermanentError
+from urllib.request import urlopen
+from urllib.error import URLError, HTTPError
+from threading import Lock
 import os
 import sublime
 import xml.etree.ElementTree as ET
-from urllib.request import urlopen
-from urllib.error import URLError, HTTPError
-import shutil
 import logging
+import requests
+import time
+import subprocess
+
 
 logger = logging.getLogger('SublimeLinter.plugin.checkstyle')
+lock = Lock()
+
+CURRENT_LATEST_CS_VERSION = None
+DOWNLOAD_BASE_URL = 'https://github.com/checkstyle/'\
+                    'checkstyle/releases/download/'
+VERSIONS_XML_URL = 'https://repo1.maven.org/maven2/'\
+                   'com/puppycrawl/tools/checkstyle/'\
+                   'maven-metadata.xml'
+CACHE_FOLDER_NAME = 'SublimeLinter-checkstyle'
 
 
-def download_file(url, file_name) -> None:
-    with urlopen(url) as response, open(file_name, 'wb') as out_file:
-        shutil.copyfileobj(response, out_file)
+def show_download_progress(finished, total) -> None:
+    """
+    Shows the download progress in the Sublime status bar
+
+    :param      finished:  A measure how much is finished
+    :type       finished:  double or None
+    :param      total:     A measure of the total amount to download
+    :type       total:     double or None
+
+    :returns:   Nothing
+    :rtype:     None
+    """
+    if finished and total:
+        percent = finished * 100 / total
+        sublime.status_message('Downloading Checkstyle: {0:2.2f}%'
+                               .format(percent))
+    else:
+        sublime.status_message('Downloading Checkstyle...')
+
+
+def download_file(url, file_name, show_progress) -> None:
+    """
+    Downloads a file and shows the progress.
+
+    :param      url:            The url to download drom
+    :type       url:            string
+    :param      file_name:      The path to the file to download to
+    :type       file_name:      string
+    :param      show_progress:  The show progress
+    :type       show_progress:  a function taking to doubles
+
+    :returns:   Nothing
+    :rtype:     None
+    """
+    r = requests.get(url, stream=True)
+    total_length = r.headers.get('content-length')
+
+    with open(file_name, 'wb') as out_file:
+        if total_length:
+            finished = 0
+            total_length = int(total_length)
+            last_displayed = 0
+            for chunk in r.iter_content(chunk_size=4096):
+                if last_displayed != int(time.time()):
+                    show_progress(finished, total_length)
+                    last_displayed = int(time.time())
+                finished += len(chunk)
+                out_file.write(chunk)
+        else:
+            out_file.write(r.content)
+            show_progress(None, None)
+    show_progress(1, 1)
 
 
 def jar_filename(version) -> str:
     return 'checkstyle-{}-all.jar'.format(version)
 
 
-def jar_path(version):
+def jar_path(version) -> str:
     return os.path.abspath(os.path.join(plugin_dir(),
                                         jar_filename(version)))
 
@@ -38,6 +100,13 @@ def download_url(version) -> str:
 
 
 def fetch_latest_cs_version() -> str:
+    """
+    Fetches the latest Checkstyle version by parsing the maven checkstyle repo.
+    Stores the version string in a module-wide variable to check only once.
+
+    :returns:   The latest checkstyle version
+    :rtype:     str
+    """
     global CURRENT_LATEST_CS_VERSION
 
     if (CURRENT_LATEST_CS_VERSION is None):
@@ -55,22 +124,39 @@ def fetch_latest_cs_version() -> str:
     return CURRENT_LATEST_CS_VERSION
 
 
-def cleanup(keep):
+def cleanup(keep) -> None:
+    """
+    Deletes every file in the plugin directory without the file specified
+    in keep.
+
+    :param      keep:  A full path to the file to keep
+    :type       keep:  str
+
+    :returns:   Nothing
+    :rtype:     None
+    """
     for f in os.listdir(plugin_dir()):
         abs_path = os.path.abspath(os.path.join(plugin_dir(), f))
         if abs_path != keep:
-            logger.info('Removing old jar: {}'.format(abs_path))
+            logger.info('Removing jar: {}'.format(abs_path))
             os.remove(abs_path)
 
 
-CURRENT_LATEST_CS_VERSION = None
-DOWNLOAD_BASE_URL = 'https://github.com/checkstyle/'\
-                    'checkstyle/releases/download/'
-VERSIONS_XML_URL = 'https://repo1.maven.org/maven2/'\
-                   'com/puppycrawl/tools/checkstyle/'\
-                   'maven-metadata.xml'
-DEBUG_PANEL_NAME = 'SublimeLinter-checkstyle'
-CACHE_FOLDER_NAME = 'SublimeLinter-checkstyle'
+def delete_corrupted_jars() -> None:
+    if not os.path.isdir(plugin_dir()):
+        return
+    for f in os.listdir(plugin_dir()):
+        abs_path = os.path.abspath(os.path.join(plugin_dir(), f))
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        ret_code = subprocess.call(['java', '-jar', abs_path, '--version'],
+                                   startupinfo=startupinfo)
+        if ret_code != 0:
+            logger.info('{} is corrupted'.format(abs_path))
+            cleanup(None)
+
+
+delete_corrupted_jars()
 
 
 class Checkstyle(Linter):
@@ -92,7 +178,9 @@ class Checkstyle(Linter):
         if version is not None:
             logger.info('Using Checkstyle {}'.format(version))
             try:
+                lock.acquire()
                 checkstyle_jar = self.provide_jar(version)
+                lock.release()
             except (HTTPError, URLError):
                 pass  # checkstyle jar is None
 
@@ -152,6 +240,6 @@ class Checkstyle(Linter):
             os.makedirs(plugin_dir(), exist_ok=True)
             url = download_url(version)
             logger.info("Downloading from {}".format(url))
-            download_file(url, checkstyle_jar)
+            download_file(url, checkstyle_jar, show_download_progress)
             cleanup(checkstyle_jar)
         return checkstyle_jar
