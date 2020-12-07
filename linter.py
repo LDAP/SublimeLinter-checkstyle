@@ -1,11 +1,8 @@
 from SublimeLinter.lint import Linter
 from SublimeLinter.lint.linter import PermanentError
-from urllib.request import urlopen
-from urllib.error import URLError, HTTPError
 from threading import Lock
 import os
 import sublime
-import xml.etree.ElementTree as ET
 import logging
 import requests
 import time
@@ -18,9 +15,8 @@ lock = Lock()
 CURRENT_LATEST_CS_VERSION = None
 DOWNLOAD_BASE_URL = 'https://github.com/checkstyle/'\
                     'checkstyle/releases/download/'
-VERSIONS_XML_URL = 'https://repo1.maven.org/maven2/'\
-                   'com/puppycrawl/tools/checkstyle/'\
-                   'maven-metadata.xml'
+GITHUB_RELEASES_API_URL = 'https://api.github.com/repos/checkstyle/'\
+                          'checkstyle/releases/latest'
 CACHE_FOLDER_NAME = 'SublimeLinter-checkstyle'
 
 
@@ -111,15 +107,15 @@ def fetch_latest_cs_version() -> str:
 
     if (CURRENT_LATEST_CS_VERSION is None):
         logger.info('Polling current checkstyle'
-                    'version from Maven')
+                    'version via GitHub API')
         try:
-            with urlopen(VERSIONS_XML_URL) as f:
-                v_tree = ET.parse(f)
-                v_root = v_tree.getroot()
-                CURRENT_LATEST_CS_VERSION = v_root[2][1].text
+            resp = requests.get(GITHUB_RELEASES_API_URL)
+            data = resp.json()
+            release_tag = data['tag_name']
+            CURRENT_LATEST_CS_VERSION = release_tag.split('-')[1]
             logger.info('Latest checkstyle version on Maven is {}'
                         .format(CURRENT_LATEST_CS_VERSION))
-        except URLError:
+        except requests.ConnectionError:
             logger.warning('Latest cs version could not be fetched!')
     return CURRENT_LATEST_CS_VERSION
 
@@ -181,7 +177,7 @@ class Checkstyle(Linter):
                 lock.acquire()
                 checkstyle_jar = self.provide_jar(version)
                 lock.release()
-            except (HTTPError, URLError):
+            except requests.ConnectionError:
                 pass  # checkstyle jar is None
 
         if checkstyle_jar is None or not os.path.isfile(checkstyle_jar):
